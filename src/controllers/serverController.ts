@@ -5,14 +5,15 @@ import {
   addServer,
   removeServer,
   updateMcpServer,
-  notifyToolChanged,
   toggleServerStatus,
-} from '../services/mcpService.js';
+  getServerConfigByName,
+} from '../services/serverConfigAdapter.js';
+import { notifyToolChanged } from '../services/mcpService.js';
 import { loadSettings, saveSettings } from '../config/index.js';
 
-export const getAllServers = (_: Request, res: Response): void => {
+export const getAllServers = async (_: Request, res: Response): Promise<void> => {
   try {
-    const serversInfo = getServersInfo();
+    const serversInfo = await getServersInfo();
     const response: ApiResponse = {
       success: true,
       data: serversInfo,
@@ -119,7 +120,7 @@ export const deleteServer = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const result = removeServer(name);
+    const result = await removeServer(name);
     if (result.success) {
       notifyToolChanged();
       res.json({
@@ -207,11 +208,12 @@ export const updateServer = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const getServerConfig = (req: Request, res: Response): void => {
+export const getServerConfig = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name } = req.params;
-    const settings = loadSettings();
-    if (!settings.mcpServers || !settings.mcpServers[name]) {
+    const serverConfig = await getServerConfigByName(name);
+
+    if (!serverConfig) {
       res.status(404).json({
         success: false,
         message: 'Server not found',
@@ -219,8 +221,10 @@ export const getServerConfig = (req: Request, res: Response): void => {
       return;
     }
 
-    const serverInfo = getServersInfo().find((s) => s.name === name);
-    const serverConfig = settings.mcpServers[name];
+    // Get server info for status and tools
+    const serversInfo = await getServersInfo();
+    const serverInfo = serversInfo.find((s) => s.name === name);
+
     const response: ApiResponse = {
       success: true,
       data: {

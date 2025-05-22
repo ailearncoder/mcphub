@@ -41,5 +41,16 @@
       "password": "$2b$10$Vt7krIvjNgyN67LXqly0uOcTpN0LI55cYRbcKC71pUDAP0nJ7RPa.",
       "isAdmin": true
     }
-  ]
+  ],
+  "systemConfig": {
+    "databaseConfig": {
+      "enabled": false,
+      "useForUsers": false,
+      "useForGroups": false,
+      "useForServerConfigs": false,
+      "useForMarketServers": false,
+      "useForVectorSearch": false,
+      "migrationCompleted": false
+    }
+  }
 }

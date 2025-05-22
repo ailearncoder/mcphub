@@ -7,13 +7,14 @@ import {
   getMarketTags,
   searchMarketServers,
   filterMarketServersByCategory,
-  filterMarketServersByTag
-} from '../services/marketService.js';
+  filterMarketServersByTag,
+} from '../services/marketServerAdapter.js';
 
 // Get all market servers
-export const getAllMarketServers = (_: Request, res: Response): void => {
+export const getAllMarketServers = async (_: Request, res: Response): Promise<void> => {
   try {
-    const marketServers = Object.values(getMarketServers());
+    const marketServersObj = await getMarketServers();
+    const marketServers = Object.values(marketServersObj);
     const response: ApiResponse = {
       success: true,
       data: marketServers,
@@ -28,7 +29,7 @@ export const getAllMarketServers = (_: Request, res: Response): void => {
 };
 
 // Get a specific market server by name
-export const getMarketServer = (req: Request, res: Response): void => {
+export const getMarketServer = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name } = req.params;
     if (!name) {
@@ -39,7 +40,7 @@ export const getMarketServer = (req: Request, res: Response): void => {
       return;
     }
 
-    const server = getMarketServerByName(name);
+    const server = await getMarketServerByName(name);
     if (!server) {
       res.status(404).json({
         success: false,
@@ -62,9 +63,9 @@ export const getMarketServer = (req: Request, res: Response): void => {
 };
 
 // Get all market categories
-export const getAllMarketCategories = (_: Request, res: Response): void => {
+export const getAllMarketCategories = async (_: Request, res: Response): Promise<void> => {
   try {
-    const categories = getMarketCategories();
+    const categories = await getMarketCategories();
     const response: ApiResponse = {
       success: true,
       data: categories,
@@ -79,9 +80,9 @@ export const getAllMarketCategories = (_: Request, res: Response): void => {
 };
 
 // Get all market tags
-export const getAllMarketTags = (_: Request, res: Response): void => {
+export const getAllMarketTags = async (_: Request, res: Response): Promise<void> => {
   try {
-    const tags = getMarketTags();
+    const tags = await getMarketTags();
     const response: ApiResponse = {
       success: true,
       data: tags,
@@ -96,12 +97,12 @@ export const getAllMarketTags = (_: Request, res: Response): void => {
 };
 
 // Search market servers
-export const searchMarketServersByQuery = (req: Request, res: Response): void => {
+export const searchMarketServersByQuery = async (req: Request, res: Response): Promise<void> => {
   try {
     const { query } = req.query;
     const searchQuery = typeof query === 'string' ? query : '';
-    
-    const servers = searchMarketServers(searchQuery);
+
+    const servers = await searchMarketServers(searchQuery);
     const response: ApiResponse = {
       success: true,
       data: servers,
@@ -116,11 +117,11 @@ export const searchMarketServersByQuery = (req: Request, res: Response): void =>
 };
 
 // Filter market servers by category
-export const getMarketServersByCategory = (req: Request, res: Response): void => {
+export const getMarketServersByCategory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { category } = req.params;
-    
-    const servers = filterMarketServersByCategory(category);
+
+    const servers = await filterMarketServersByCategory(category);
     const response: ApiResponse = {
       success: true,
       data: servers,
@@ -135,11 +136,11 @@ export const getMarketServersByCategory = (req: Request, res: Response): void =>
 };
 
 // Filter market servers by tag
-export const getMarketServersByTag = (req: Request, res: Response): void => {
+export const getMarketServersByTag = async (req: Request, res: Response): Promise<void> => {
   try {
     const { tag } = req.params;
-    
-    const servers = filterMarketServersByTag(tag);
+
+    const servers = await filterMarketServersByTag(tag);
     const response: ApiResponse = {
       success: true,
       data: servers,

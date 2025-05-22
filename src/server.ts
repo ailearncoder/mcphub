@@ -30,6 +30,15 @@ export class AppServer {
 
   async initialize(): Promise<void> {
     try {
+      // Initialize database module if enabled
+      try {
+        const { initializeDbModule } = await import('./db/index.js');
+        await initializeDbModule();
+        console.log('Database module initialized');
+      } catch (dbError) {
+        console.warn('Database module initialization skipped:', dbError.message);
+      }
+
       // Initialize default admin user if no users exist
       await initializeDefaultUser();
 

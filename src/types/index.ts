@@ -90,6 +90,15 @@ export interface McpSettings {
       pythonIndexUrl?: string; // Python package repository URL (UV_DEFAULT_INDEX)
       npmRegistry?: string; // NPM registry URL (npm_config_registry)
     };
+    databaseConfig?: {
+      enabled: boolean; // Master switch for database usage
+      useForUsers: boolean; // Use database for user storage
+      useForGroups: boolean; // Use database for group storage
+      useForServerConfigs: boolean; // Use database for server configs
+      useForMarketServers: boolean; // Use database for market servers
+      useForVectorSearch: boolean; // Use database for vector search
+      migrationCompleted: boolean; // Flag to track if migration has been completed
+    };
     // Add other system configuration sections here in the future
   };
 }

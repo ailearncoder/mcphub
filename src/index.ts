@@ -1,3 +1,4 @@
+import 'reflect-metadata'; // This import must come before any entity imports
 import AppServer from './server.js';
 
 const appServer = new AppServer();
