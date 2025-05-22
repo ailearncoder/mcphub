@@ -21,11 +21,6 @@ export class DbConfig {
     if (!settings.systemConfig[DbConfig.DB_CONFIG_KEY]) {
       settings.systemConfig[DbConfig.DB_CONFIG_KEY] = {
         enabled: false,
-        useForUsers: false,
-        useForGroups: false,
-        useForServerConfigs: false,
-        useForMarketServers: false,
-        useForVectorSearch: false,
         migrationCompleted: false,
       };
       saveSettings(settings);
@@ -49,11 +44,6 @@ export class DbConfig {
     // Get current config or initialize with defaults
     const currentConfig = (settings.systemConfig[DbConfig.DB_CONFIG_KEY] as DatabaseConfig) || {
       enabled: false,
-      useForUsers: false,
-      useForGroups: false,
-      useForServerConfigs: false,
-      useForMarketServers: false,
-      useForVectorSearch: false,
       migrationCompleted: false,
     };
 
@@ -67,36 +57,16 @@ export class DbConfig {
   }
 
   /**
-   * Checks if database usage is enabled for a specific entity type
-   * @param entityType The entity type to check
+   * Checks if database is enabled globally
+   * @param entityType Optional parameter kept for backward compatibility
    */
-  static isEnabledFor(entityType: DatabaseEntityType): boolean {
-    const config = DbConfig.getConfig();
-
-    // Database must be globally enabled first
-    if (!config.enabled) {
-      return false;
-    }
-
-    switch (entityType) {
-      case 'users':
-        return config.useForUsers;
-      case 'groups':
-        return config.useForGroups;
-      case 'serverConfigs':
-        return config.useForServerConfigs;
-      case 'marketServers':
-        return config.useForMarketServers;
-      case 'vectorSearch':
-        return config.useForVectorSearch;
-      default:
-        return false;
-    }
+  static isEnabledFor(entityType?: DatabaseEntityType): boolean {
+    return DbConfig.getConfig().enabled;
   }
 }
 
 /**
- * Database entity types
+ * Database entity types (kept for backward compatibility)
  */
 export type DatabaseEntityType =
   | 'users'
@@ -110,10 +80,5 @@ export type DatabaseEntityType =
  */
 export interface DatabaseConfig {
   enabled: boolean;
-  useForUsers: boolean;
-  useForGroups: boolean;
-  useForServerConfigs: boolean;
-  useForMarketServers: boolean;
-  useForVectorSearch: boolean;
   migrationCompleted: boolean;
 }

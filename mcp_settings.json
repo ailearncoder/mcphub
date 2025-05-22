@@ -45,11 +45,6 @@
   "systemConfig": {
     "databaseConfig": {
       "enabled": false,
-      "useForUsers": false,
-      "useForGroups": false,
-      "useForServerConfigs": false,
-      "useForMarketServers": false,
-      "useForVectorSearch": false,
       "migrationCompleted": false
     }
   }

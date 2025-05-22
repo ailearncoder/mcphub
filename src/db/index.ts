@@ -73,21 +73,8 @@ export function getRepositoryFactory(
 export function shouldUseDatabase(
   entityType: 'users' | 'groups' | 'serverConfigs' | 'marketServers' | 'vectorEmbeddings',
 ): boolean {
-  // Map the entity type to the appropriate DbConfig option
-  switch (entityType) {
-    case 'users':
-      return DbConfig.isEnabledFor('users');
-    case 'groups':
-      return DbConfig.isEnabledFor('groups');
-    case 'serverConfigs':
-      return DbConfig.isEnabledFor('serverConfigs');
-    case 'marketServers':
-      return DbConfig.isEnabledFor('marketServers');
-    case 'vectorEmbeddings':
-      return DbConfig.isEnabledFor('vectorSearch');
-    default:
-      return false;
-  }
+  // 只检查全局 enabled 标志
+  return DbConfig.isEnabledFor();
 }
 
 // Re-export everything from the database module
