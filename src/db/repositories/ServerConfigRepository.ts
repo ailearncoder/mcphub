@@ -63,7 +63,7 @@ export class ServerConfigRepository {
    */
   async delete(name: string): Promise<boolean> {
     const result = await this.repository.delete({ name });
-    return result.affected !== undefined && result.affected > 0;
+    return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }
 
   /**

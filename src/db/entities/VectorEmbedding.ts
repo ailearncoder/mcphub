@@ -25,7 +25,7 @@ export class VectorEmbedding {
   metadata: Record<string, any>; // Additional metadata about the embedding
 
   @Index({ spatial: true })
-  @Column('vector', { nullable: true })
+  @Column('float', { array: true, nullable: true })
   embedding: number[]; // The vector embedding
 
   @Column({ type: 'int' })

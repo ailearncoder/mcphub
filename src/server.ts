@@ -36,7 +36,8 @@ export class AppServer {
         await initializeDbModule();
         console.log('Database module initialized');
       } catch (dbError) {
-        console.warn('Database module initialization skipped:', dbError.message);
+        const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+        console.warn('Database module initialization skipped:', errorMessage);
       }
 
       // Initialize default admin user if no users exist

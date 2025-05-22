@@ -1,8 +1,8 @@
-import User from './User.js';
-import Group from './Group.js';
-import ServerConfig from './ServerConfig.js';
-import MarketServer from './MarketServer.js';
-import VectorEmbedding from './VectorEmbedding.js';
+import { User } from './User.js';
+import { Group } from './Group.js';
+import { ServerConfig } from './ServerConfig.js';
+import { MarketServer } from './MarketServer.js';
+import { VectorEmbedding } from './VectorEmbedding.js';
 
 // Export all entities
 export default [User, Group, ServerConfig, MarketServer, VectorEmbedding];

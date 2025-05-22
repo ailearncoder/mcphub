@@ -1,10 +1,10 @@
-import { Repository, EntityTarget } from 'typeorm';
+import { Repository, EntityTarget, ObjectLiteral } from 'typeorm';
 import { AppDataSource } from '../connection.js';
 
 /**
  * Base repository class with common CRUD operations
  */
-export class BaseRepository<T> {
+export class BaseRepository<T extends ObjectLiteral> {
   protected readonly repository: Repository<T>;
 
   constructor(entityClass: EntityTarget<T>) {
@@ -55,7 +55,7 @@ export class BaseRepository<T> {
    */
   async delete(id: string | number): Promise<boolean> {
     const result = await this.repository.delete(id);
-    return result.affected !== undefined && result.affected > 0;
+    return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }
 
   /**

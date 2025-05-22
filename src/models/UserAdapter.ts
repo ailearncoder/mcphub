@@ -1,4 +1,4 @@
-import { shouldUseDatabase, getRepositoryFactory } from '../db/index.js';
+import { shouldUseDatabase, getRepositoryFactory, repositories } from '../db/index.js';
 import {
   findUserByUsername as findUserByUsernameFile,
   createUser as createUserFile,
@@ -8,6 +8,7 @@ import {
   initializeDefaultUser as initializeDefaultUserFile,
 } from './User.js';
 import { IUser } from '../types/index.js';
+import { User } from '../db/entities/index.js';
 
 /**
  * Get all users
@@ -16,11 +17,11 @@ export const getUsers = async (): Promise<IUser[]> => {
   // Check if database should be used for users
   if (shouldUseDatabase('users')) {
     try {
-      const userRepository = getRepositoryFactory('users')();
+      const userRepository = getRepositoryFactory('users')() as repositories.UserRepository;
       const dbUsers = await userRepository.findAll();
 
       // Convert DB entities to IUser interface
-      return dbUsers.map((user) => ({
+      return dbUsers.map((user: User) => ({
         username: user.username,
         password: user.password,
         isAdmin: user.isAdmin,
@@ -44,7 +45,7 @@ export const findUserByUsername = async (username: string): Promise<IUser | unde
   // Check if database should be used for users
   if (shouldUseDatabase('users')) {
     try {
-      const userRepository = getRepositoryFactory('users')();
+      const userRepository = getRepositoryFactory('users')() as repositories.UserRepository;
       const user = await userRepository.findByUsername(username);
 
       if (user) {
@@ -75,7 +76,7 @@ export const createUser = async (userData: IUser): Promise<IUser | null> => {
   // Check if database should be used for users
   if (shouldUseDatabase('users')) {
     try {
-      const userRepository = getRepositoryFactory('users')();
+      const userRepository = getRepositoryFactory('users')() as repositories.UserRepository;
       const user = await userRepository.createUser(userData);
 
       return {
@@ -119,7 +120,7 @@ export const updateUserPassword = async (
   // Check if database should be used for users
   if (shouldUseDatabase('users')) {
     try {
-      const userRepository = getRepositoryFactory('users')();
+      const userRepository = getRepositoryFactory('users')() as repositories.UserRepository;
       return await userRepository.updatePassword(username, newPassword);
     } catch (error) {
       console.error('Error updating user password in database:', error);
@@ -139,7 +140,7 @@ export const initializeDefaultUser = async (): Promise<void> => {
   // Check if database should be used for users
   if (shouldUseDatabase('users')) {
     try {
-      const userRepository = getRepositoryFactory('users')();
+      const userRepository = getRepositoryFactory('users')() as repositories.UserRepository;
       const users = await userRepository.findAll();
 
       if (users.length === 0) {
