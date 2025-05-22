@@ -17,10 +17,10 @@ export class MarketServer {
     url: string;
   };
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   homepage: string;
 
-  @Column({ type: 'simple-json' })
+  @Column({ type: 'simple-json', nullable: true })
   author: {
     name: string;
   };

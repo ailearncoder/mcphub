@@ -39,6 +39,9 @@ export async function migrateToDatabase(): Promise<{
     // Load settings
     const settings = loadSettings();
 
+    // Clear join tables first to handle foreign key constraints
+    await AppDataSource.query('TRUNCATE TABLE "group_server_mappings" CASCADE');
+
     // Migrate users
     const userCount = await migrateUsers(settings.users || []);
 
@@ -108,8 +111,8 @@ async function migrateServerConfigs(serverConfigs: Record<string, any>): Promise
 
   const serverConfigRepository = new ServerConfigRepository();
 
-  // Clear existing server configs if any
-  await AppDataSource.getRepository(ServerConfig).clear();
+  // Clear existing server configs with CASCADE to handle foreign key constraints
+  await AppDataSource.query('TRUNCATE TABLE "server_configs" CASCADE');
 
   // Insert all server configs
   for (const [name, config] of Object.entries(serverConfigs)) {

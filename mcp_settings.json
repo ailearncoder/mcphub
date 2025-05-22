@@ -44,8 +44,8 @@
   ],
   "systemConfig": {
     "databaseConfig": {
-      "enabled": false,
-      "migrationCompleted": false
+      "enabled": true,
+      "migrationCompleted": true
     }
   }
 }
