@@ -519,7 +519,12 @@ const handleCallToolRequest = async (request: any, extra: any) => {
 
       // Return in the same format as handleListToolsRequest
       return {
-        content: tools,
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(tools),
+          },
+        ],
       };
     }
 
