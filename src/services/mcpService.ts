@@ -380,7 +380,7 @@ const handleListToolsRequest = async (_: any, extra: any) => {
   const group = getGroup(sessionId);
   console.log(`Handling ListToolsRequest for group: ${group}`);
 
-  // Special handling for $agent group to return a search tool
+  // Special handling for $agent group to return special tools
   if (group === '$agent') {
     return {
       tools: [
@@ -401,6 +401,24 @@ const handleListToolsRequest = async (_: any, extra: any) => {
               },
             },
             required: ['query'],
+          },
+        },
+        {
+          name: 'invoke_tool',
+          description: 'Directly invoke a tool from any available server.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              toolName: {
+                type: 'string',
+                description: 'The name of the tool to invoke',
+              },
+              arguments: {
+                type: 'object',
+                description: 'The arguments to pass to the tool (optional)',
+              },
+            },
+            required: ['toolName'],
           },
         },
       ],
@@ -430,7 +448,7 @@ const handleListToolsRequest = async (_: any, extra: any) => {
 const handleCallToolRequest = async (request: any, extra: any) => {
   console.log(`Handling CallToolRequest for tool: ${request.params.name}`);
   try {
-    // Special handling for search_tools tool
+    // Special handling for agent group tools
     if (request.params.name === 'search_tools') {
       const { query, limit = 10 } = request.params.arguments || {};
 
@@ -440,7 +458,7 @@ const handleCallToolRequest = async (request: any, extra: any) => {
 
       const limitNum = Math.min(Math.max(parseInt(String(limit)) || 10, 1), 100);
       // Use fixed values for threshold and servers
-      const thresholdNum = 0.7;
+      const thresholdNum = 0.3;
       const servers = undefined; // No server filtering
 
       const searchResults = await searchToolsByVector(query, limitNum, thresholdNum, servers);
@@ -475,6 +493,53 @@ const handleCallToolRequest = async (request: any, extra: any) => {
       return {
         content: tools,
       };
+    }
+
+    // Special handling for invoke_tool
+    if (request.params.name === 'invoke_tool') {
+      const { toolName, arguments: toolArgs = {} } = request.params.arguments || {};
+
+      if (!toolName) {
+        throw new Error('toolName parameter is required');
+      }
+
+      // arguments parameter is now optional
+
+      let targetServerInfo: ServerInfo | undefined;
+
+      // Find the first server that has this tool
+      targetServerInfo = serverInfos.find(
+        (serverInfo) =>
+          serverInfo.status === 'connected' &&
+          serverInfo.enabled !== false &&
+          serverInfo.tools.some((tool) => tool.name === toolName),
+      );
+
+      if (!targetServerInfo) {
+        throw new Error(`No available servers found with tool: ${toolName}`);
+      }
+
+      // Check if the tool exists on the server
+      const toolExists = targetServerInfo.tools.some((tool) => tool.name === toolName);
+      if (!toolExists) {
+        throw new Error(`Tool '${toolName}' not found on server '${targetServerInfo.name}'`);
+      }
+
+      // Call the tool on the target server
+      const client = targetServerInfo.client;
+      if (!client) {
+        throw new Error(`Client not found for server: ${targetServerInfo.name}`);
+      }
+
+      console.log(`Invoking tool '${toolName}' on server '${targetServerInfo.name}'`);
+
+      const result = await client.callTool({
+        name: toolName,
+        arguments: toolArgs,
+      });
+
+      console.log(`Tool invocation result: ${JSON.stringify(result)}`);
+      return result;
     }
 
     // Regular tool handling
