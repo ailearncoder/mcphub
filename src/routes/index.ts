@@ -7,7 +7,7 @@ import {
   updateServer,
   deleteServer,
   toggleServer,
-  updateSystemConfig
+  updateSystemConfig,
 } from '../controllers/serverController.js';
 import {
   getGroups,
@@ -18,7 +18,7 @@ import {
   addServerToExistingGroup,
   removeServerFromExistingGroup,
   getGroupServers,
-  updateGroupServersBatch
+  updateGroupServersBatch,
 } from '../controllers/groupController.js';
 import {
   getAllMarketServers,
@@ -27,19 +27,17 @@ import {
   getAllMarketTags,
   searchMarketServersByQuery,
   getMarketServersByCategory,
-  getMarketServersByTag
+  getMarketServersByTag,
 } from '../controllers/marketController.js';
+import { login, register, getCurrentUser, changePassword } from '../controllers/authController.js';
+import { getAllLogs, clearLogs, streamLogs } from '../controllers/logController.js';
 import {
-  login,
-  register,
-  getCurrentUser,
-  changePassword
-} from '../controllers/authController.js';
-import {
-  getAllLogs,
-  clearLogs,
-  streamLogs
-} from '../controllers/logController.js';
+  searchTools,
+  getAllTools,
+  rebuildEmbeddings,
+  rebuildServerEmbeddings,
+  getVectorStats,
+} from '../controllers/vectorSearchController.js';
 import { auth } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -53,7 +51,7 @@ export const initRoutes = (app: express.Application): void => {
   router.delete('/servers/:name', deleteServer);
   router.post('/servers/:name/toggle', toggleServer);
   router.put('/system-config', updateSystemConfig);
-  
+
   // Group management routes
   router.get('/groups', getGroups);
   router.get('/groups/:id', getGroup);
@@ -65,7 +63,7 @@ export const initRoutes = (app: express.Application): void => {
   router.get('/groups/:id/servers', getGroupServers);
   // New route for batch updating servers in a group
   router.put('/groups/:id/servers/batch', updateGroupServersBatch);
-  
+
   // Market routes
   router.get('/market/servers', getAllMarketServers);
   router.get('/market/servers/search', searchMarketServersByQuery);
@@ -74,31 +72,50 @@ export const initRoutes = (app: express.Application): void => {
   router.get('/market/categories/:category', getMarketServersByCategory);
   router.get('/market/tags', getAllMarketTags);
   router.get('/market/tags/:tag', getMarketServersByTag);
-  
+
   // Log routes
   router.get('/logs', getAllLogs);
   router.delete('/logs', clearLogs);
   router.get('/logs/stream', streamLogs);
-  
+
+  // Vector search routes
+  router.get('/vector/tools/search', searchTools);
+  router.get('/vector/tools', getAllTools);
+  router.post('/vector/rebuild', rebuildEmbeddings);
+  router.post('/vector/servers/:serverName/rebuild', rebuildServerEmbeddings);
+  router.get('/vector/stats', getVectorStats);
+
   // Auth routes (these will NOT be protected by auth middleware)
-  app.post('/auth/login', [
-    check('username', 'Username is required').not().isEmpty(),
-    check('password', 'Password is required').not().isEmpty(),
-  ], login);
-  
-  app.post('/auth/register', [
-    check('username', 'Username is required').not().isEmpty(),
-    check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
-  ], register);
-  
+  app.post(
+    '/auth/login',
+    [
+      check('username', 'Username is required').not().isEmpty(),
+      check('password', 'Password is required').not().isEmpty(),
+    ],
+    login,
+  );
+
+  app.post(
+    '/auth/register',
+    [
+      check('username', 'Username is required').not().isEmpty(),
+      check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+    ],
+    register,
+  );
+
   app.get('/auth/user', auth, getCurrentUser);
-  
+
   // Add change password route
-  app.post('/auth/change-password', [
-    auth,
-    check('currentPassword', 'Current password is required').not().isEmpty(),
-    check('newPassword', 'New password must be at least 6 characters').isLength({ min: 6 }),
-  ], changePassword);
+  app.post(
+    '/auth/change-password',
+    [
+      auth,
+      check('currentPassword', 'Current password is required').not().isEmpty(),
+      check('newPassword', 'New password must be at least 6 characters').isLength({ min: 6 }),
+    ],
+    changePassword,
+  );
 
   app.use('/api', router);
 };

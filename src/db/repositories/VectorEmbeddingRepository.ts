@@ -55,6 +55,13 @@ export class VectorEmbeddingRepository extends BaseRepository<VectorEmbedding> {
     vectorEmbedding.metadata = metadata;
     vectorEmbedding.model = model;
 
+    // For raw SQL operations where our subscriber might not be called
+    // Ensure the embedding is properly formatted for postgres
+    const rawEmbedding = this.formatEmbeddingForPgVector(embedding);
+    if (rawEmbedding) {
+      (vectorEmbedding as any).embedding = rawEmbedding;
+    }
+
     return this.save(vectorEmbedding);
   }
 
@@ -71,32 +78,70 @@ export class VectorEmbeddingRepository extends BaseRepository<VectorEmbedding> {
     threshold = 0.7,
     contentTypes?: string[],
   ): Promise<Array<{ embedding: VectorEmbedding; similarity: number }>> {
-    // Build query
-    let query = AppDataSource.createQueryBuilder()
-      .select('vector_embedding.*')
-      .addSelect(`1 - (vector_embedding.embedding <=> :embedding) AS similarity`)
-      .from(VectorEmbedding, 'vector_embedding')
-      .where(`1 - (vector_embedding.embedding <=> :embedding) > :threshold`)
-      .orderBy('similarity', 'DESC')
-      .limit(limit)
-      .setParameter('embedding', `[${embedding.join(',')}]`)
-      .setParameter('threshold', threshold);
+    try {
+      // Try using vector similarity operator first
+      try {
+        // Build query with vector operators
+        let query = AppDataSource.createQueryBuilder()
+          .select('vector_embedding.*')
+          .addSelect(`1 - (vector_embedding.embedding <=> :embedding) AS similarity`)
+          .from(VectorEmbedding, 'vector_embedding')
+          .where(`1 - (vector_embedding.embedding <=> :embedding) > :threshold`)
+          .orderBy('similarity', 'DESC')
+          .limit(limit)
+          .setParameter(
+            'embedding',
+            Array.isArray(embedding) ? `[${embedding.join(',')}]` : embedding,
+          )
+          .setParameter('threshold', threshold);
 
-    // Add content type filter if provided
-    if (contentTypes && contentTypes.length > 0) {
-      query = query
-        .andWhere('vector_embedding.content_type IN (:...contentTypes)')
-        .setParameter('contentTypes', contentTypes);
+        // Add content type filter if provided
+        if (contentTypes && contentTypes.length > 0) {
+          query = query
+            .andWhere('vector_embedding.content_type IN (:...contentTypes)')
+            .setParameter('contentTypes', contentTypes);
+        }
+
+        // Execute query
+        const results = await query.getRawMany();
+
+        // Return results if successful
+        return results.map((row) => ({
+          embedding: this.mapRawToEntity(row),
+          similarity: parseFloat(row.similarity),
+        }));
+      } catch (vectorError) {
+        console.warn(
+          'Vector similarity search failed, falling back to basic filtering:',
+          vectorError,
+        );
+
+        // Fallback to just getting the records by content type
+        let query = this.repository.createQueryBuilder('vector_embedding');
+
+        // Add content type filter if provided
+        if (contentTypes && contentTypes.length > 0) {
+          query = query
+            .where('vector_embedding.content_type IN (:...contentTypes)')
+            .setParameter('contentTypes', contentTypes);
+        }
+
+        // Limit results
+        query = query.take(limit);
+
+        // Execute query
+        const results = await query.getMany();
+
+        // Return results with a placeholder similarity
+        return results.map((entity) => ({
+          embedding: entity,
+          similarity: 0.5, // Placeholder similarity
+        }));
+      }
+    } catch (error) {
+      console.error('Error during vector search:', error);
+      return [];
     }
-
-    // Execute query
-    const results = await query.getRawMany();
-
-    // Map results to the expected format
-    return results.map((row) => ({
-      embedding: this.mapRawToEntity(row),
-      similarity: parseFloat(row.similarity),
-    }));
   }
 
   /**
@@ -143,6 +188,30 @@ export class VectorEmbeddingRepository extends BaseRepository<VectorEmbedding> {
     entity.createdAt = raw.created_at;
     entity.updatedAt = raw.updated_at;
     return entity;
+  }
+
+  /**
+   * Format embedding array for pgvector
+   * @param embedding Array of embedding values
+   * @returns Properly formatted vector string for pgvector
+   */
+  private formatEmbeddingForPgVector(embedding: number[] | string): string | null {
+    if (!embedding) return null;
+
+    // If it's already a string and starts with '[', assume it's formatted
+    if (typeof embedding === 'string') {
+      if (embedding.startsWith('[') && embedding.endsWith(']')) {
+        return embedding;
+      }
+      return `[${embedding}]`;
+    }
+
+    // Format array as proper pgvector string
+    if (Array.isArray(embedding)) {
+      return `[${embedding.join(',')}]`;
+    }
+
+    return null;
   }
 }
 

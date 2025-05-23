@@ -9,6 +9,7 @@ import { loadSettings, saveSettings, expandEnvVars } from '../config/index.js';
 import config from '../config/index.js';
 import { getGroup } from './sseService.js';
 import { getServersInGroup } from './groupService.js';
+import { saveToolsAsVectorEmbeddings } from './vectorSearchService.js';
 
 const servers: { [sessionId: string]: Server } = {};
 
@@ -153,7 +154,7 @@ export const initializeClientsFromSettings = (isInit: boolean): ServerInfo[] => 
 
         client
           .listTools({}, { timeout: timeout })
-          .then((tools) => {
+          .then(async (tools) => {
             console.log(`Successfully listed ${tools.tools.length} tools for server: ${name}`);
             const serverInfo = getServerByName(name);
             if (!serverInfo) {
@@ -168,6 +169,15 @@ export const initializeClientsFromSettings = (isInit: boolean): ServerInfo[] => 
             }));
             serverInfo.status = 'connected';
             serverInfo.error = null;
+
+            // Save tools as vector embeddings for search
+            if (serverInfo.tools.length > 0) {
+              try {
+                await saveToolsAsVectorEmbeddings(name, serverInfo.tools);
+              } catch (vectorError) {
+                console.warn(`Failed to save vector embeddings for server ${name}:`, vectorError);
+              }
+            }
           })
           .catch((error) => {
             console.error(

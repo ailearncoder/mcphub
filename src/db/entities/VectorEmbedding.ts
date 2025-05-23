@@ -24,9 +24,12 @@ export class VectorEmbedding {
   @Column('simple-json')
   metadata: Record<string, any>; // Additional metadata about the embedding
 
-  @Index({ spatial: true })
-  @Column('float', { array: true, nullable: true })
-  embedding: number[]; // The vector embedding
+  @Column({
+    type: 'float',
+    array: true,
+    nullable: true,
+  })
+  embedding: number[]; // The vector embedding - will be converted to vector type after table creation
 
   @Column({ type: 'int' })
   dimensions: number; // Dimensionality of the embedding vector
