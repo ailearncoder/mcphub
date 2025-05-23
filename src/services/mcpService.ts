@@ -414,8 +414,19 @@ const handleListToolsRequest = async (_: any, extra: any) => {
       tools: [
         {
           name: 'search_tools',
-          description:
-            'Use this tool first to search for relevant tools across all available servers. For optimal results, use specific queries matching your exact needs. Call this tool multiple times with different queries for different parts of complex tasks. Example queries: "image generation tools", "code review tools", "data analysis", "translation capabilities", etc. Results are sorted by relevance using vector similarity.',
+          description: (() => {
+            // Get info about available servers
+            const availableServers = serverInfos.filter(
+              (server) => server.status === 'connected' && server.enabled !== false,
+            );
+            // Create simple server information with only server names
+            const serversList = availableServers
+              .map((server) => {
+                return `${server.name}`;
+              })
+              .join(', ');
+            return `Use this tool first to search for relevant tools across all available servers. For optimal results, use specific queries matching your exact needs. Call this tool multiple times with different queries for different parts of complex tasks. Example queries: "image generation tools", "code review tools", "data analysis", "translation capabilities", etc. Results are sorted by relevance using vector similarity.\n\nAvailable servers: ${serversList}`;
+          })(),
           inputSchema: {
             type: 'object',
             properties: {
