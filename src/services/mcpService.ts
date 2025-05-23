@@ -414,17 +414,20 @@ const handleListToolsRequest = async (_: any, extra: any) => {
       tools: [
         {
           name: 'search_tools',
-          description: 'Search for tools across all available servers using vector similarity.',
+          description:
+            'Use this tool first to search for relevant tools across all available servers. For optimal results, use specific queries matching your exact needs. Call this tool multiple times with different queries for different parts of complex tasks. Example queries: "image generation tools", "code review tools", "data analysis", "translation capabilities", etc. Results are sorted by relevance using vector similarity.',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'The search query to find relevant tools',
+                description:
+                  'The search query to find relevant tools. Be specific and descriptive about the task you want to accomplish.',
               },
               limit: {
                 type: 'integer',
-                description: 'Maximum number of results to return',
+                description:
+                  'Maximum number of results to return. Use higher values (20-30) for broad searches and lower values (5-10) for specific searches.',
                 default: 10,
               },
             },
@@ -433,7 +436,8 @@ const handleListToolsRequest = async (_: any, extra: any) => {
         },
         {
           name: 'invoke_tool',
-          description: 'Directly invoke a tool from any available server.',
+          description:
+            "After finding tools with search_tools, use this to directly invoke any tool from available servers. Always check the tool's inputSchema before invoking it to ensure you provide the correct arguments.",
           inputSchema: {
             type: 'object',
             properties: {
@@ -485,8 +489,21 @@ const handleCallToolRequest = async (request: any, extra: any) => {
       }
 
       const limitNum = Math.min(Math.max(parseInt(String(limit)) || 10, 1), 100);
-      // Use fixed values for threshold and servers
-      const thresholdNum = 0.3;
+
+      // Dynamically adjust threshold based on query characteristics
+      let thresholdNum = 0.3; // Default threshold
+
+      // For more general queries, use a lower threshold to get more diverse results
+      if (query.length < 10 || query.split(' ').length <= 2) {
+        thresholdNum = 0.2;
+      }
+
+      // For very specific queries, use a higher threshold for more precise results
+      if (query.length > 30 || query.includes('specific') || query.includes('exact')) {
+        thresholdNum = 0.4;
+      }
+
+      console.log(`Using similarity threshold: ${thresholdNum} for query: "${query}"`);
       const servers = undefined; // No server filtering
 
       const searchResults = await searchToolsByVector(query, limitNum, thresholdNum, servers);
@@ -517,12 +534,30 @@ const handleCallToolRequest = async (request: any, extra: any) => {
         };
       });
 
+      // Add usage guidance to the response
+      const response = {
+        tools,
+        metadata: {
+          query: query,
+          threshold: thresholdNum,
+          totalResults: tools.length,
+          guideline:
+            tools.length > 0
+              ? "Found relevant tools. If these tools don't match exactly what you need, try another search with more specific keywords."
+              : 'No tools found. Try broadening your search or using different keywords.',
+          nextSteps:
+            tools.length > 0
+              ? 'To use a tool, call invoke_tool with the toolName and required arguments.'
+              : 'Consider searching for related capabilities or more general terms.',
+        },
+      };
+
       // Return in the same format as handleListToolsRequest
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(tools),
+            text: JSON.stringify(response),
           },
         ],
       };
