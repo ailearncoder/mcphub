@@ -22,15 +22,23 @@ export const getServersInfo = async () => {
       )() as ServerConfigRepository;
       const dbServerConfigs = await serverConfigRepository.findAll();
 
+      // Get runtime server information to merge status and tools
+      const runtimeServersInfo = getServersInfoFile();
+
       // Convert DB entities to match the expected format from getServersInfo
-      return dbServerConfigs.map((config) => ({
-        name: config.name,
-        status: 'disconnected', // Default status since DB only stores config
-        error: null,
-        tools: [],
-        createTime: config.createdAt ? config.createdAt.getTime() : Date.now(),
-        enabled: config.enabled,
-      }));
+      return dbServerConfigs.map((config) => {
+        // Find corresponding runtime info for this server
+        const runtimeInfo = runtimeServersInfo.find((info) => info.name === config.name);
+
+        return {
+          name: config.name,
+          status: runtimeInfo ? runtimeInfo.status : 'disconnected',
+          error: runtimeInfo ? runtimeInfo.error : null,
+          tools: runtimeInfo ? runtimeInfo.tools : [],
+          createTime: config.createdAt ? config.createdAt.getTime() : Date.now(),
+          enabled: config.enabled,
+        };
+      });
     } catch (error) {
       console.error('Error getting server configurations from database:', error);
       // Fallback to file-based storage
