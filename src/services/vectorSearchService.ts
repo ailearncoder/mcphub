@@ -247,48 +247,66 @@ export const searchToolsByVector = async (
     // Filter by server names if provided
     let filteredResults = results;
     if (serverNames && serverNames.length > 0) {
-      filteredResults = results.filter((result) =>
-        serverNames.includes(result.embedding.metadata.serverName),
-      );
+      filteredResults = results.filter((result) => {
+        if (typeof result.embedding.metadata === 'string') {
+          try {
+            const parsedMetadata = JSON.parse(result.embedding.metadata);
+            return serverNames.includes(parsedMetadata.serverName);
+          } catch (error) {
+            return false;
+          }
+        }
+        return false;
+      });
     }
 
     // Transform results to a more useful format
     return filteredResults.map((result) => {
-      // Check if we have metadata in the expected format
-      if (result.embedding?.metadata?.serverName && result.embedding?.metadata?.toolName) {
-        // We have properly structured metadata
-        return {
-          serverName: result.embedding.metadata.serverName,
-          toolName: result.embedding.metadata.toolName,
-          description: result.embedding.metadata.description || '',
-          inputSchema: result.embedding.metadata.inputSchema || {},
-          similarity: result.similarity,
-          searchableText: result.embedding.text_content,
-        };
-      } else {
-        // Extract tool info from text_content if metadata is not available
-        const textContent = result.embedding?.text_content || '';
+      // Check if we have metadata as a string that needs to be parsed
+      if (result.embedding?.metadata && typeof result.embedding.metadata === 'string') {
+        try {
+          // Parse the metadata string as JSON
+          const parsedMetadata = JSON.parse(result.embedding.metadata);
 
-        // Extract toolName (first word of text_content)
-        const toolNameMatch = textContent.match(/^(\S+)/);
-        const toolName = toolNameMatch ? toolNameMatch[1] : '';
-
-        // Extract serverName from toolName if it follows the pattern "serverName_toolPart"
-        const serverNameMatch = toolName.match(/^([^_]+)_/);
-        const serverName = serverNameMatch ? serverNameMatch[1] : 'unknown';
-
-        // Extract description (everything after the first word)
-        const description = textContent.replace(/^\S+\s*/, '').trim();
-
-        return {
-          serverName,
-          toolName,
-          description,
-          inputSchema: {},
-          similarity: result.similarity,
-          searchableText: textContent,
-        };
+          if (parsedMetadata.serverName && parsedMetadata.toolName) {
+            // We have properly structured metadata
+            return {
+              serverName: parsedMetadata.serverName,
+              toolName: parsedMetadata.toolName,
+              description: parsedMetadata.description || '',
+              inputSchema: parsedMetadata.inputSchema || {},
+              similarity: result.similarity,
+              searchableText: result.embedding.text_content,
+            };
+          }
+        } catch (error) {
+          console.error('Error parsing metadata string:', error);
+          // Fall through to the extraction logic below
+        }
       }
+
+      // Extract tool info from text_content if metadata is not available or parsing failed
+      const textContent = result.embedding?.text_content || '';
+
+      // Extract toolName (first word of text_content)
+      const toolNameMatch = textContent.match(/^(\S+)/);
+      const toolName = toolNameMatch ? toolNameMatch[1] : '';
+
+      // Extract serverName from toolName if it follows the pattern "serverName_toolPart"
+      const serverNameMatch = toolName.match(/^([^_]+)_/);
+      const serverName = serverNameMatch ? serverNameMatch[1] : 'unknown';
+
+      // Extract description (everything after the first word)
+      const description = textContent.replace(/^\S+\s*/, '').trim();
+
+      return {
+        serverName,
+        toolName,
+        description,
+        inputSchema: {},
+        similarity: result.similarity,
+        searchableText: textContent,
+      };
     });
   } catch (error) {
     console.error('Error searching tools by vector:', error);
@@ -331,18 +349,47 @@ export const getAllVectorizedTools = async (
     // Filter by server names if provided
     let filteredResults = results;
     if (serverNames && serverNames.length > 0) {
-      filteredResults = results.filter((result) =>
-        serverNames.includes(result.embedding.metadata.serverName),
-      );
+      filteredResults = results.filter((result) => {
+        if (typeof result.embedding.metadata === 'string') {
+          try {
+            const parsedMetadata = JSON.parse(result.embedding.metadata);
+            return serverNames.includes(parsedMetadata.serverName);
+          } catch (error) {
+            return false;
+          }
+        }
+        return false;
+      });
     }
 
     // Transform results
-    return filteredResults.map((result) => ({
-      serverName: result.embedding.metadata.serverName,
-      toolName: result.embedding.metadata.toolName,
-      description: result.embedding.metadata.description,
-      inputSchema: result.embedding.metadata.inputSchema,
-    }));
+    return filteredResults.map((result) => {
+      if (typeof result.embedding.metadata === 'string') {
+        try {
+          const parsedMetadata = JSON.parse(result.embedding.metadata);
+          return {
+            serverName: parsedMetadata.serverName,
+            toolName: parsedMetadata.toolName,
+            description: parsedMetadata.description,
+            inputSchema: parsedMetadata.inputSchema,
+          };
+        } catch (error) {
+          console.error('Error parsing metadata string:', error);
+          return {
+            serverName: 'unknown',
+            toolName: 'unknown',
+            description: '',
+            inputSchema: {},
+          };
+        }
+      }
+      return {
+        serverName: 'unknown',
+        toolName: 'unknown',
+        description: '',
+        inputSchema: {},
+      };
+    });
   } catch (error) {
     console.error('Error getting all vectorized tools:', error);
     return [];
