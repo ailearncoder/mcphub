@@ -10,6 +10,7 @@ import config from '../config/index.js';
 import { getGroup } from './sseService.js';
 import { getServersInGroup } from './groupService.js';
 import { saveToolsAsVectorEmbeddings, searchToolsByVector } from './vectorSearchService.js';
+import { shouldUseDatabase } from '../db/index.js';
 
 const servers: { [sessionId: string]: Server } = {};
 
@@ -54,12 +55,39 @@ export const notifyToolChanged = async () => {
 let serverInfos: ServerInfo[] = [];
 
 // Initialize MCP server clients
-export const initializeClientsFromSettings = (isInit: boolean): ServerInfo[] => {
+export const initializeClientsFromSettings = async (isInit: boolean): Promise<ServerInfo[]> => {
   const settings = loadSettings();
   const existingServerInfos = serverInfos;
   serverInfos = [];
 
-  for (const [name, conf] of Object.entries(settings.mcpServers)) {
+  // Get server configs from database if available
+  let serverConfigs: Record<string, ServerConfig> = {};
+
+  try {
+    if (shouldUseDatabase('serverConfigs')) {
+      // Import the adapter dynamically to avoid circular import
+      const { getServersInfo, getServerConfigByName } = await import('./serverConfigAdapter.js');
+      const dbServers = await getServersInfo();
+
+      for (const server of dbServers) {
+        const config = await getServerConfigByName(server.name);
+        if (config) {
+          serverConfigs[server.name] = config;
+        }
+      }
+      console.log(`Loaded ${Object.keys(serverConfigs).length} server configs from database`);
+    } else {
+      serverConfigs = settings.mcpServers;
+    }
+  } catch (error) {
+    console.error(
+      'Error loading server configs from database, falling back to file-based settings:',
+      error,
+    );
+    serverConfigs = settings.mcpServers;
+  }
+
+  for (const [name, conf] of Object.entries(serverConfigs)) {
     // Skip disabled servers
     if (conf.enabled === false) {
       console.log(`Skipping disabled server: ${name}`);
@@ -217,10 +245,10 @@ export const initializeClientsFromSettings = (isInit: boolean): ServerInfo[] => 
 
 // Register all MCP tools
 export const registerAllTools = async (isInit: boolean): Promise<void> => {
-  initializeClientsFromSettings(isInit);
+  await initializeClientsFromSettings(isInit);
 };
 
-// Get all server information
+// Get all server information (file-based approach, used by adapter)
 export const getServersInfo = (): Omit<ServerInfo, 'client' | 'transport'>[] => {
   const settings = loadSettings();
   const infos = serverInfos.map(({ name, status, tools, createTime, error }) => {
