@@ -20,12 +20,14 @@ const __dirname = path.dirname(__filename);
 
 export class AppServer {
   private app: express.Application;
-  private port: number | string;
+  private port: number;
+  private host: string;
   private frontendPath: string | null = null;
 
   constructor() {
     this.app = express();
     this.port = config.port;
+    this.host = config.host;
   }
 
   async initialize(): Promise<void> {
@@ -85,13 +87,13 @@ export class AppServer {
   }
 
   start(): void {
-    this.app.listen(this.port, () => {
-      console.log(`Server is running on port ${this.port}`);
+    this.app.listen(this.port, this.host, () => {
+      console.log(`Server is running on ${this.host}:${this.port}`);
       if (this.frontendPath) {
-        console.log(`Open http://localhost:${this.port} in your browser to access MCPHub UI`);
+        console.log(`Open http://${this.host}:${this.port} in your browser to access MCPHub UI`);
       } else {
         console.log(
-          `MCPHub API is running on http://localhost:${this.port}, but the UI is not available`,
+          `MCPHub API is running on http://${this.host}:${this.port}, but the UI is not available`,
         );
       }
     });

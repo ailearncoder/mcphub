@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import config from '../config/index.js';
 
 // Default secret key - in production, use an environment variable
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
@@ -14,6 +15,12 @@ export const auth = (req: Request, res: Response, next: NextFunction): void => {
   // Check if no token
   if (!token) {
     res.status(401).json({ success: false, message: 'No token, authorization denied' });
+    return;
+  }
+
+  // check if token is a valid API token
+  if (config.apiToken && token == config.apiToken) {
+    next();
     return;
   }
 

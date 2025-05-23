@@ -99,16 +99,23 @@ export const initializeClientsFromSettings = (isInit: boolean): ServerInfo[] => 
 
       // Add UV_DEFAULT_INDEX from settings if available (for Python packages)
       const settings = loadSettings(); // Add UV_DEFAULT_INDEX from settings if available (for Python packages)
-      if (settings.systemConfig?.install?.pythonIndexUrl && conf.command === 'uvx') {
-        env['UV_DEFAULT_INDEX'] = settings.systemConfig.install.pythonIndexUrl;
+      if (conf.command === 'uvx') {
+        if (settings.systemConfig?.install?.pythonIndexUrl) {
+          env['UV_DEFAULT_INDEX'] = settings.systemConfig.install.pythonIndexUrl;
+        } else {
+          env['UV_DEFAULT_INDEX'] = "https://pypi.tuna.tsinghua.edu.cn/simple"
+        }
+        env['UV_LINK_MODE'] = "copy"
       }
 
       // Add npm_config_registry from settings if available (for NPM packages)
-      if (
-        settings.systemConfig?.install?.npmRegistry &&
-        (conf.command === 'npm' || conf.command === 'npx')
-      ) {
-        env['npm_config_registry'] = settings.systemConfig.install.npmRegistry;
+      if (conf.command === 'npm' || conf.command === 'npx') {
+        if (settings.systemConfig?.install?.npmRegistry) {
+          env['npm_config_registry'] = settings.systemConfig.install.npmRegistry;
+        } else {
+          env['npm_config_registry'] = "https://registry.npmmirror.com"
+          env['NPM_REGISTRY'] = 'https://registry.npmmirror.com'
+        }
       }
 
       transport = new StdioClientTransport({
