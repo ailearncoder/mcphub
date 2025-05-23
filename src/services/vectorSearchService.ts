@@ -253,14 +253,43 @@ export const searchToolsByVector = async (
     }
 
     // Transform results to a more useful format
-    return filteredResults.map((result) => ({
-      serverName: result.embedding.metadata.serverName,
-      toolName: result.embedding.metadata.toolName,
-      description: result.embedding.metadata.description,
-      inputSchema: result.embedding.metadata.inputSchema,
-      similarity: result.similarity,
-      searchableText: result.embedding.text_content,
-    }));
+    return filteredResults.map((result) => {
+      // Check if we have metadata in the expected format
+      if (result.embedding?.metadata?.serverName && result.embedding?.metadata?.toolName) {
+        // We have properly structured metadata
+        return {
+          serverName: result.embedding.metadata.serverName,
+          toolName: result.embedding.metadata.toolName,
+          description: result.embedding.metadata.description || '',
+          inputSchema: result.embedding.metadata.inputSchema || {},
+          similarity: result.similarity,
+          searchableText: result.embedding.text_content,
+        };
+      } else {
+        // Extract tool info from text_content if metadata is not available
+        const textContent = result.embedding?.text_content || '';
+
+        // Extract toolName (first word of text_content)
+        const toolNameMatch = textContent.match(/^(\S+)/);
+        const toolName = toolNameMatch ? toolNameMatch[1] : '';
+
+        // Extract serverName from toolName if it follows the pattern "serverName_toolPart"
+        const serverNameMatch = toolName.match(/^([^_]+)_/);
+        const serverName = serverNameMatch ? serverNameMatch[1] : 'unknown';
+
+        // Extract description (everything after the first word)
+        const description = textContent.replace(/^\S+\s*/, '').trim();
+
+        return {
+          serverName,
+          toolName,
+          description,
+          inputSchema: {},
+          similarity: result.similarity,
+          searchableText: textContent,
+        };
+      }
+    });
   } catch (error) {
     console.error('Error searching tools by vector:', error);
     return [];

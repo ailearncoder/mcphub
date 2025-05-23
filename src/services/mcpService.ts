@@ -9,7 +9,7 @@ import { loadSettings, saveSettings, expandEnvVars } from '../config/index.js';
 import config from '../config/index.js';
 import { getGroup } from './sseService.js';
 import { getServersInGroup } from './groupService.js';
-import { saveToolsAsVectorEmbeddings } from './vectorSearchService.js';
+import { saveToolsAsVectorEmbeddings, searchToolsByVector } from './vectorSearchService.js';
 
 const servers: { [sessionId: string]: Server } = {};
 
@@ -379,6 +379,34 @@ const handleListToolsRequest = async (_: any, extra: any) => {
   const sessionId = extra.sessionId || '';
   const group = getGroup(sessionId);
   console.log(`Handling ListToolsRequest for group: ${group}`);
+
+  // Special handling for $agent group to return a search tool
+  if (group === '$agent') {
+    return {
+      tools: [
+        {
+          name: 'search_tools',
+          description: 'Search for tools across all available servers using vector similarity.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'The search query to find relevant tools',
+              },
+              limit: {
+                type: 'integer',
+                description: 'Maximum number of results to return',
+                default: 10,
+              },
+            },
+            required: ['query'],
+          },
+        },
+      ],
+    };
+  }
+
   const allServerInfos = serverInfos.filter((serverInfo) => {
     if (serverInfo.enabled === false) return false;
     if (!group) return true;
@@ -402,6 +430,54 @@ const handleListToolsRequest = async (_: any, extra: any) => {
 const handleCallToolRequest = async (request: any, extra: any) => {
   console.log(`Handling CallToolRequest for tool: ${request.params.name}`);
   try {
+    // Special handling for search_tools tool
+    if (request.params.name === 'search_tools') {
+      const { query, limit = 10 } = request.params.arguments || {};
+
+      if (!query || typeof query !== 'string') {
+        throw new Error('Query parameter is required and must be a string');
+      }
+
+      const limitNum = Math.min(Math.max(parseInt(String(limit)) || 10, 1), 100);
+      // Use fixed values for threshold and servers
+      const thresholdNum = 0.7;
+      const servers = undefined; // No server filtering
+
+      const searchResults = await searchToolsByVector(query, limitNum, thresholdNum, servers);
+      console.log(`Search results: ${JSON.stringify(searchResults)}`);
+      // Find actual tool information from serverInfos by serverName and toolName
+      const tools = searchResults.map((result) => {
+        // Find the server in serverInfos
+        const server = serverInfos.find(
+          (serverInfo) =>
+            serverInfo.name === result.serverName &&
+            serverInfo.status === 'connected' &&
+            serverInfo.enabled !== false,
+        );
+        if (server && server.tools && server.tools.length > 0) {
+          // Find the tool in server.tools
+          const actualTool = server.tools.find((tool) => tool.name === result.toolName);
+          if (actualTool) {
+            // Return the actual tool info from serverInfos
+            return actualTool;
+          }
+        }
+
+        // Fallback to search result if server or tool not found
+        return {
+          name: result.toolName,
+          description: result.description || '',
+          inputSchema: result.inputSchema || {},
+        };
+      });
+
+      // Return in the same format as handleListToolsRequest
+      return {
+        content: tools,
+      };
+    }
+
+    // Regular tool handling
     const serverInfo = getServerByTool(request.params.name);
     if (!serverInfo) {
       throw new Error(`Server not found: ${request.params.name}`);
